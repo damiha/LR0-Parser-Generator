@@ -11,7 +11,7 @@ public class LRZeroTableGenerator {
 
     Map<ConfigurationSet, Integer> configurationToId;
 
-    public Pair<Action[][], int[][]> createActionAndGotoTable(Grammar grammar){
+    public ParserTable createActionAndGotoTable(Grammar grammar){
 
         // register each new configuration state with a new number
         configurationToId = new HashMap<>();
@@ -66,7 +66,101 @@ public class LRZeroTableGenerator {
             nIterations++;
         }
 
-        return null;
+        return createGotoAndActionTable(configurationSets, successorFunction, grammar);
+    }
+
+    private ParserTable createGotoAndActionTable(List<ConfigurationSet> configurationSets,
+                                                               Map<Pair<ConfigurationSet, Symbol>, ConfigurationSet> successor, Grammar grammar){
+
+        int nStates = configurationSets.size();
+
+        // add the terminal $ for eof
+        grammar.terminals.addLast(new Terminal("$"));
+
+        // for the parser table
+        Action[][] actionTable = new Action[nStates][grammar.terminals.size()];
+        int[][] gotoTable = new int[nStates][grammar.nonTerminals.size()];
+        Map<Terminal, Integer> terminalToIdx = new HashMap<>();
+        Map<NonTerminal, Integer> nonTerminalToIdx = new HashMap<>();
+
+        int idx = 0;
+        for(Terminal terminal : grammar.terminals){
+            terminalToIdx.put(terminal, idx);
+            idx++;
+        }
+
+        idx = 0;
+        for(NonTerminal nonTerminal : grammar.nonTerminals){
+            nonTerminalToIdx.put(nonTerminal, idx);
+            idx++;
+        }
+
+        for(int i = 0; i < configurationSets.size(); i++){
+
+            ConfigurationSet stateI = configurationSets.get(i);
+
+            for(Item item : stateI.items){
+
+                // we have the case A -> u#
+                // in the case A is not E', we know that for LR(0), this will only be one such configuration
+
+                // so it can't be that A -> u# and A -> v# for LR(0), we would have a reduce-reduce conflict
+                if(item.isDotAtEnd()){
+
+                    if(item.lHs.equals(grammar.startSymbol)){
+
+                        // we have parsed the entire (have S*) on the stack
+                        // now we expect that there's no more input so eof
+                        actionTable[i][grammar.terminals.size() - 1] = new Action.Accept();
+                    }
+
+                    else{
+                        // we can assume we have no reduce-reduce conflicts or shift-reduce conflicts,
+                        // so we can set the entire row to reduce
+
+                        // we have to reduce with a production rule
+                        int prodId = grammar.getProdId(item);
+
+                        for(int j = 0; j < grammar.terminals.size(); j++){
+
+                            // stateI is an item so is like a production rule with a dot
+                            // we need to find the production rule number
+                            actionTable[i][j] = new Action.Reduce(prodId);
+                        }
+                    }
+                }
+                else if(item.isTerminalAfterDot()){
+                    // we aren't finished, so we can't reduce
+                    // we need to shift further
+                    Terminal toShift = item.terminalAfterDot();
+
+                    int tIndex = terminalToIdx.get(toShift);
+
+                    ConfigurationSet nextConfiguration = successor.get(new Pair<>(stateI, toShift));
+
+                    // TODO: use hash tables for this
+                    int nextConfigurationIdx = configurationSets.indexOf(nextConfiguration);
+
+                    // shift needs to know the next state
+                    actionTable[i][tIndex] = new Action.Shift(nextConfigurationIdx);
+                }
+                else{
+                    // there must be a something after the dot because we are not done
+                    // the something must be a Non-terminal
+                    NonTerminal nonTerminal = item.nonTerminalAfterDot();
+                    int nIndex = nonTerminalToIdx.get(nonTerminal);
+
+                    ConfigurationSet nextConfiguration = successor.get(new Pair<>(stateI, nonTerminal));
+
+                    // TODO: use hash tables for this
+                    int nextConfigurationIdx = configurationSets.indexOf(nextConfiguration);
+
+                    gotoTable[i][nIndex] = nextConfigurationIdx;
+                }
+            }
+        }
+
+        return new ParserTable(actionTable, gotoTable, terminalToIdx, nonTerminalToIdx, grammar);
     }
 
     private Optional<ConfigurationSet> registerAndGetConfigurationSet(Set<Item> items){

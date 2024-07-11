@@ -23,12 +23,29 @@ public class Item {
         return String.format("%s -> %s", lHs.toString(), rhsStrings.stream().collect(Collectors.joining("")));
     }
 
+    public String stringWithoutDot(){
+        List<String> rhsStrings = new java.util.ArrayList<>(rHs.stream().map(Objects::toString).toList());
+        return String.format("%s -> %s", lHs.toString(), String.join("", rhsStrings));
+    }
+
     public NonTerminal nonTerminalAfterDot(){
         return (NonTerminal) rHs.get(dotPosition);
     }
 
+    public Terminal terminalAfterDot(){
+        return (Terminal) rHs.get(dotPosition);
+    }
+
     public Symbol symbolAfterDot(){
         return dotPosition < rHs.size() ? rHs.get(dotPosition) : null;
+    }
+
+    public boolean isDotAtEnd(){
+        return dotPosition >= rHs.size();
+    }
+
+    public boolean isTerminalAfterDot(){
+        return !isDotAtEnd() && symbolAfterDot() instanceof Terminal;
     }
 
     @Override

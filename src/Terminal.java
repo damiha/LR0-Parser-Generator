@@ -13,4 +13,8 @@ public class Terminal extends Symbol{
     public boolean equals(Object o){
         return o instanceof Terminal nT && nT.name.equals(name);
     }
+
+    public int hashCode(){
+        return name.hashCode();
+    }
 }

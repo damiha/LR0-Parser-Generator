@@ -14,12 +14,20 @@ public class Parser {
 
     Grammar grammar;
 
-    public Parser(Action[][] actionTable, int[][] gotoTable, Map<Terminal, Integer> terminalToIdx, Map<NonTerminal, Integer> nonTerminalToIdx, Grammar grammar){
-        this.actionTable = actionTable;
-        this.gotoTable = gotoTable;
-        this.terminalToIdx = terminalToIdx;
-        this.nonTerminalToIdx = nonTerminalToIdx;
-        this.grammar = grammar;
+    boolean printDebug = false;
+
+    public Parser(ParserTable parserTable){
+        this.actionTable = parserTable.actionTable;
+        this.gotoTable = parserTable.gotoTable;
+        this.terminalToIdx = parserTable.terminalToIdx;
+        this.nonTerminalToIdx = parserTable.nonTerminalToIdx;
+        this.grammar = parserTable.grammar;
+    }
+
+    private void log(String message){
+        if(printDebug){
+            System.out.printf("[DEBUG]: %s\n", message);
+        }
     }
 
     // input is always terminal symbols
@@ -49,7 +57,7 @@ public class Parser {
             else if(a instanceof Action.Shift shift){
                 int nextState = shift.nextStateId;
 
-                System.out.printf("Changing to state %d\n", nextState);
+                log(String.format("Changing to state %d\n", nextState));
 
                 stateStack.add(nextState);
 
@@ -61,7 +69,7 @@ public class Parser {
             else if(a instanceof Action.Reduce reduce){
                 Production reduceWith = grammar.productions.get(reduce.prodId);
 
-                System.out.printf("Reducing with production %s\n", reduceWith.toString());
+                log(String.format("Reducing with production %s\n", reduceWith.toString()));
 
                 int nonTerminalIdx = nonTerminalToIdx.get(reduceWith.lHs);
 
@@ -88,10 +96,10 @@ public class Parser {
                 int newState = gotoTable[state][nonTerminalIdx];
                 stateStack.add(newState);
 
-                System.out.printf("Changing to state %d\n", newState);
+                log(String.format("Changing to state %d\n", newState));
             }
             else if(a instanceof Action.Accept){
-                System.out.println("Parsing successful");
+                log("Parsing successful");
                 return nodeStack.getLast();
             }
         }

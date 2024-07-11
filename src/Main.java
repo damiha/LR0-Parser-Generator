@@ -1,3 +1,4 @@
+import java.sql.SQLOutput;
 import java.util.List;
 
 public class Main {
@@ -9,7 +10,6 @@ public class Main {
         Terminal plus = new Terminal("+");
         Terminal leftParen = new Terminal("(");
         Terminal rightParen = new Terminal(")");
-        Terminal eof = new Terminal("$");
 
         List<Production> productions = List.of(
                 new Production(E, List.of(E, plus, T)),
@@ -18,14 +18,31 @@ public class Main {
                 new Production(T, List.of(id))
         );
 
-        System.out.println(productions);
-
         Grammar grammar = new Grammar(
                 E, productions, List.of(id, plus, leftParen, rightParen), List.of(E, T)
         );
 
+        System.out.println(grammar);
+
         LRZeroTableGenerator tableGenerator = new LRZeroTableGenerator();
 
-        tableGenerator.createActionAndGotoTable(grammar);
+        ParserTable parserTable = tableGenerator.createActionAndGotoTable(grammar);
+
+        System.out.println("Table generated from grammar: ");
+        System.out.println(parserTable);
+
+        Parser parser = new Parser(parserTable);
+
+        List<Terminal> input = List.of(
+                id, plus, leftParen, id, rightParen, plus, leftParen, leftParen, id, rightParen, rightParen, new Terminal("$")
+        );
+
+        ASTNode node = parser.parse(input);
+
+        System.out.printf("Yield: %s\n", node.yield());
+
+        Interpreter interpreter = new Interpreter();
+
+        System.out.printf("Result: %s\n", interpreter.interpret(node));
     }
 }
