@@ -5,9 +5,9 @@ import java.util.*;
 
 public class LRZeroTableGenerator {
 
-    boolean printDebug = true;
+    boolean printDebug = false;
     int stateCounter = 0;
-    int maxIterations = 100000;
+    int maxIterations = 1_000;
 
     Map<ConfigurationSet, Integer> configurationToId;
 
@@ -22,7 +22,10 @@ public class LRZeroTableGenerator {
         List<ConfigurationSet> configurationSets = new ArrayList<>();
         List<ConfigurationSet> workSet = new ArrayList<>();
 
-        ConfigurationSet c0 = registerAndGetConfigurationSet(Set.of(new Item(grammar.startSymbol, grammar.productions.getFirst().rHs, 0)));
+        Set<Item> c0Set = new HashSet<>(Set.of(new Item(grammar.startSymbol, grammar.productions.getFirst().rHs, 0)));
+        closure(c0Set, grammar);
+
+        ConfigurationSet c0 = registerAndGetConfigurationSet(c0Set).get();
         workSet.add(c0);
 
         Map<Pair<ConfigurationSet, Symbol>, ConfigurationSet> successorFunction = new HashMap<>();
@@ -38,13 +41,14 @@ public class LRZeroTableGenerator {
 
             configurationSets.add(current);
 
-            closure(current, grammar);
+            // assume elements of the work set already had the closure operation applied to them
+            //closure(current, grammar);
 
             log(current.toString());
 
             for(Symbol symbol : grammar.getSymbols()) {
 
-                ConfigurationSet successor = getSuccessor(current, symbol, grammar);
+                Optional<ConfigurationSet> successor = getSuccessor(current, symbol, grammar);
 
                 if(successor.isEmpty()){
                     continue;
@@ -52,10 +56,10 @@ public class LRZeroTableGenerator {
 
                 Pair<ConfigurationSet, Symbol> key = new Pair<>(current, symbol);
 
-                successorFunction.put(key, successor);
+                successorFunction.put(key, successor.get());
 
-                if(!configurationSets.contains(successor) && !workSet.contains(successor)) {
-                    workSet.add(successor);
+                if(!configurationSets.contains(successor.get()) && !workSet.contains(successor.get())) {
+                    workSet.add(successor.get());
                 }
             }
 
@@ -65,21 +69,26 @@ public class LRZeroTableGenerator {
         return null;
     }
 
-    private ConfigurationSet registerAndGetConfigurationSet(Set<Item> items){
+    private Optional<ConfigurationSet> registerAndGetConfigurationSet(Set<Item> items){
+
+        // add and increment the counter only if the configuration set has items
+        if(items.isEmpty()){
+            return Optional.empty();
+        }
+
         ConfigurationSet configurationSet = new ConfigurationSet(items);
 
         if(configurationToId.containsKey(configurationSet)){
-            int stateId = configurationToId.get(configurationSet);
-            configurationSet.stateId = stateId;
+            configurationSet.stateId = configurationToId.get(configurationSet);
         }
         else{
             configurationSet.stateId = stateCounter;
             configurationToId.put(configurationSet, stateCounter++);
         }
-        return configurationSet;
+        return Optional.of(configurationSet);
     }
 
-    private ConfigurationSet getSuccessor(ConfigurationSet configurationSet, Symbol symbolAfterDot, Grammar grammar){
+    private Optional<ConfigurationSet> getSuccessor(ConfigurationSet configurationSet, Symbol symbolAfterDot, Grammar grammar){
 
         log(String.format("--- SUCCESSOR <I_%d, %s> ---", configurationSet.stateId, symbolAfterDot));
 
@@ -96,12 +105,9 @@ public class LRZeroTableGenerator {
             }
         }
 
-        // don't increment here, maybe this is a duplicate and we rather need to create  a link in the automaton
-        ConfigurationSet successorSet = registerAndGetConfigurationSet(successorItems);
+        closure(successorItems, grammar);
 
-        closure(successorSet, grammar);
-
-        return successorSet;
+        return registerAndGetConfigurationSet(successorItems);
     }
 
     // should create a deep copy
@@ -116,11 +122,11 @@ public class LRZeroTableGenerator {
         return new Item(item.lHs, item.rHs, item.dotPosition + 1);
     }
 
-    private void closure(ConfigurationSet configurationSet, Grammar grammar){
+    private void closure(Set<Item> items, Grammar grammar){
 
         log("--- CLOSURE ---");
 
-        List<Item> workSet = new ArrayList<>(configurationSet.items);
+        List<Item> workSet = new ArrayList<>(items);
 
         while(!workSet.isEmpty()){
 
@@ -134,10 +140,10 @@ public class LRZeroTableGenerator {
                 List<Item> itemsToAdd = getAsStartingItems(toAdd);
 
                 for(Item item : itemsToAdd){
-                    if(!configurationSet.items.contains(item)){
+                    if(!items.contains(item)){
                         log(String.format("Adding item %s", item.toString()));
 
-                        configurationSet.items.add(item);
+                        items.add(item);
                         workSet.add(item);
                     }
                 }

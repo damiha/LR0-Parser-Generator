@@ -30,7 +30,18 @@ public class ConfigurationSet {
     }
 
     @Override
+    public int hashCode(){
+        return this.items.hashCode();
+    }
+
+    @Override
     public boolean equals(Object o) {
-        return (o instanceof ConfigurationSet other) && (items.equals(other.items));
+        //System.out.println("Comparison");
+        //System.out.println(this);
+        //System.out.println(o);
+        boolean result = (o instanceof ConfigurationSet other) && (items.equals(other.items));
+        //System.out.println("Result: ");
+        //System.out.println(result);
+        return result;
     }
 }
