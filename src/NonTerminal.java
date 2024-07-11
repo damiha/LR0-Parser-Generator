@@ -11,4 +11,8 @@ public class NonTerminal extends Symbol{
     public String toString(){
         return name;
     }
+
+    public boolean equals(Object o){
+        return o instanceof NonTerminal nT && nT.name.equals(name);
+    }
 }

@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public class Grammar {
@@ -12,8 +13,15 @@ public class Grammar {
 
     public Grammar(NonTerminal startSymbol, List<Production> productions, List<Terminal> terminals, List<NonTerminal> nonTerminals){
         this.startSymbol = startSymbol;
-        this.productions = productions;
-        this.terminals = terminals;
-        this.nonTerminals = nonTerminals;
+        this.productions = new ArrayList<>(productions);
+        this.terminals = new ArrayList<>(terminals);
+        this.nonTerminals = new ArrayList<>(nonTerminals);
+    }
+
+    public List<Symbol> getSymbols(){
+        List<Symbol> symbols = new ArrayList<>();
+        symbols.addAll(terminals);
+        symbols.addAll(nonTerminals);
+        return symbols;
     }
 }

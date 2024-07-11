@@ -9,4 +9,8 @@ public class Terminal extends Symbol{
     public String toString(){
         return name;
     }
+
+    public boolean equals(Object o){
+        return o instanceof Terminal nT && nT.name.equals(name);
+    }
 }
